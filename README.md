@@ -73,10 +73,41 @@ opencode run "decime hola" --model cursor/gpt-5
 opencode run "listame los archivos del repo" --model cursor/auto
 ```
 
+## Configuration
+
+### Idle Timeout
+
+The proxy server uses Bun's default idle timeout (10 seconds). If `cursor-agent` responses take longer, you can increase the timeout.
+
+**Option 1: Via `opencode.json`** (recommended)
+
+Add `idleTimeout` to the cursor provider options:
+
+```json
+{
+  "provider": {
+    "cursor": {
+      "options": {
+        "baseURL": "http://127.0.0.1:32123/v1",
+        "idleTimeout": 120
+      }
+    }
+  }
+}
+```
+
+**Option 2: Via environment variable**
+
+```bash
+export CURSOR_PROXY_IDLE_TIMEOUT=120  # 2 minutes
+```
+
+The environment variable takes precedence over the config file.
+
 ## Notes
 
 - Tool-calling is experimental but works for built-in tools like `list`, `read`, `grep`, `bash`, `todowrite`.
-- Token usage/cost accounting and a dedicated “thinking” panel are not available via `cursor-agent`.
+- Token usage/cost accounting and a dedicated "thinking" panel are not available via `cursor-agent`.
 
 ## License
 

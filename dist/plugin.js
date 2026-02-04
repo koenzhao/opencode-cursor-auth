@@ -1,4 +1,26 @@
+import { readFileSync } from "fs";
+import { join } from "path";
+import { homedir } from "os";
 const CURSOR_PROVIDER_ID = "cursor";
+/**
+ * Read idle timeout from opencode.json provider options.
+ * Looks for: provider.cursor.options.idleTimeout
+ */
+function getIdleTimeoutFromConfig() {
+    try {
+        const configPath = join(homedir(), ".config", "opencode", "opencode.json");
+        const configText = readFileSync(configPath, "utf-8");
+        const config = JSON.parse(configText);
+        const timeout = config?.provider?.cursor?.options?.idleTimeout;
+        if (typeof timeout === "number" && timeout > 0) {
+            return timeout;
+        }
+    }
+    catch {
+        // Config not found or invalid, ignore
+    }
+    return undefined;
+}
 // Local proxy server that translates OpenAI-compatible HTTP to cursor-agent CLI.
 const CURSOR_PROXY_HOST = "127.0.0.1";
 const CURSOR_PROXY_DEFAULT_PORT = 32123;
@@ -163,6 +185,10 @@ function getGlobalKey() {
 async function ensureCursorProxyServer(workspaceDirectory) {
     const key = getGlobalKey();
     const g = globalThis;
+    // Optional idle timeout: env var takes precedence over config file
+    const envTimeout = parseInt(process.env.CURSOR_PROXY_IDLE_TIMEOUT || "", 10);
+    const configTimeout = getIdleTimeoutFromConfig();
+    const idleTimeout = envTimeout > 0 ? envTimeout : configTimeout;
     const existingBaseURL = g[key]?.baseURL;
     if (typeof existingBaseURL === "string" && existingBaseURL.length > 0) {
         return existingBaseURL;
@@ -410,6 +436,7 @@ async function ensureCursorProxyServer(workspaceDirectory) {
                 hostname: CURSOR_PROXY_HOST,
                 port,
                 fetch: handler,
+                ...(idleTimeout !== undefined && { idleTimeout }),
             });
         };
         try {
